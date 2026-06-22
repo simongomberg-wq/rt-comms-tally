@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>Communication Tally</title>
+ <style>
+    body { font-family: Arial; padding: 20px; max-width: 600px; margin: auto; }
+    button { margin: 5px; padding: 10px; border-radius: 8px; cursor: pointer; }
+    .card { border: 1px solid #ccc; padding: 10px; border-radius: 8px; margin-top: 10px; }
+    #status { font-size: 0.85em; color: #666; min-height: 1.2em; }
+    #toolbar { margin-top: 20px; }
+    #toolbar button { background: #eee; }
+ </style>
+</head>
+<body>
+ <h1>Daily Communication Tally</h1>
+ <h2 id="total">Total: 0</h2>
+ <div id="status"></div>
+ <div id="stepContainer"></div>
+
+ <div id="toolbar">
+    <button id="undoBtn">Undo last entry</button>
+    <button id="exportBtn">Download CSV (backup)</button>
+ </div>
+
+ <h3 style="margin-top: 30px">Interactions</h3>
+ <div id="log"></div>
+
+<script>
+// ---- CONFIGURE THIS: paste your Google Apps Script Web App URL here ----
+const SHEET_ENDPOINT = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+// --------------------------------------------------------------------------
+
+const roles = ["Consultant","SpR","Physics","Pre Treatment Rad","Treatment Rad","RT Admin","Physics Admin"];
+const methods = ["Email","Smartpage","EPIC","Aria","Phone Call","Text Message"];
+const typeOfCommunicationOptions = [
+ "Clinical RT related",
+ "Clinical Non RT related",
+ "Non-Clinical RT related",
+ "Non-Clinical Non RT related"
+];
+const sendReceiveOptions = ["Send","Receive"];
+const correctOptions = ["Correct","Incorrect"];
+const urgencyOptions = [
+ "Life threatening (now)",
+ "Urgent (30 mins)",
+ "Semi-urgent (1 hour)",
+ "Non-urgent (today)",
+ "Non-urgent (tomorrow)"
+];
+
+const steps = [
+ { title: "1. Role", options: roles, field: "role" },
+ { title: "2. Method of Communication", options: methods, field: "method" },
+ { title: "3. Type of Communication", options: typeOfCommunicationOptions, field: "typeOfCommunication" },
+ { title: "4. Send or Receive", options: sendReceiveOptions, field: "direction" },
+ { title: "5. Correct Recipient?", options: correctOptions, field: "correct" },
+ { title: "6. Urgency", options: urgencyOptions, field: "urgency" }
+];
+
+const STORAGE_KEY = "commTallyInteractions";
+let stepIndex = 0;
+let current = {};
+let interactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+function save() {
+ localStorage.setItem(STORAGE_KEY, JSON.stringify(interactions));
+}
+
+function setStatus(msg, isError) {
+ const el = document.getElementById('status');
+ el.innerText = msg;
+ el.style.color = isError ? '#c00' : '#666';
+}
+
+function render() {
+ document.getElementById('total').innerText = 'Total: ' + interactions.length;
+ const container = document.getElementById('stepContainer');
+ container.innerHTML = '';
+
+ const { title, options, field } = steps[stepIndex];
+
+ const h3 = document.createElement('h3');
+ h3.innerText = title;
+ container.appendChild(h3);
+
+ options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.innerText = opt;
+    btn.onclick = () => handleSelect(field, opt);
+    container.appendChild(btn);
+ });
+
+ const log = document.getElementById('log');
+ log.innerHTML = '';
+ interactions.slice(0, 20).forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <strong>${item.role}</strong><br>
+      ${item.method}<br>
+      ${item.typeOfCommunication}<br>
+      ${item.direction}<br>
+      ${item.correct}<br>
+      ${item.urgency}<br>
+      <small>${new Date(item.timestamp).toLocaleString()}</small>
+    `;
+    log.appendChild(div);
+ });
+}
+
+function handleSelect(field, value) {
+ current[field] = value;
+ if (stepIndex === steps.length - 1) {
+    const record = { ...current, id: Date.now(), timestamp: new Date().toISOString() };
+    interactions.unshift(record);
+    save();
+    submitToSheet(record);
+    current = {};
+    stepIndex = 0;
+ } else {
+    stepIndex++;
+ }
+ render();
+}
+
+function submitToSheet(record) {
+ if (!SHEET_ENDPOINT || SHEET_ENDPOINT.indexOf("PASTE_YOUR") === 0) {
+    setStatus('Saved locally only (no Google Sheet connected yet).', false);
+    return;
+ }
+ setStatus('Saving...', false);
+ fetch(SHEET_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(record)
+ })
+ .then(res => res.ok ? setStatus('Saved to shared log ✓', false) : setStatus('Saved locally; sync to sheet failed.', true))
+ .catch(() => setStatus('Saved locally; no internet connection to sync.', true));
+}
+
+function exportCsv() {
+ if (interactions.length === 0) { setStatus('Nothing to export yet.', true); return; }
+ const headers = ['timestamp','role','method','typeOfCommunication','direction','correct','urgency'];
+ const rows = interactions.map(i => headers.map(h => '"' + String(i[h] ?? '').replace(/"/g, '""') + '"').join(','));
+ const csv = headers.join(',') + '\n' + rows.join('\n');
+ const blob = new Blob([csv], { type: 'text/csv' });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = 'communication-tally-' + new Date().toISOString().slice(0,10) + '.csv';
+ a.click();
+ URL.revokeObjectURL(url);
+}
+
+document.getElementById('undoBtn').onclick = () => {
+ if (interactions.length === 0) return;
+ interactions.shift();
+ save();
+ render();
+ setStatus('Last entry removed locally.', false);
+};
+document.getElementById('exportBtn').onclick = exportCsv;
+
+render();
+</script>
+</body>
+</html>
