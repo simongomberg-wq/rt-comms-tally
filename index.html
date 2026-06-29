@@ -15,6 +15,7 @@
 </head>
 <body>
  <h1>Daily Communication Tally</h1>
+ <div id="userBadge" style="font-size:0.9em;color:#444;margin-bottom:8px;"></div>
  <h2 id="total">Total: 0</h2>
  <div id="status"></div>
  <div id="stepContainer"></div>
@@ -60,6 +61,25 @@ const steps = [
 ];
 
 const STORAGE_KEY = "commTallyInteractions";
+const USER_STORAGE_KEY = "commTallyUser";
+
+function getUserId() {
+ const params = new URLSearchParams(window.location.search);
+ let user = params.get('user');
+ if (user) {
+    localStorage.setItem(USER_STORAGE_KEY, user);
+    return user;
+ }
+ user = localStorage.getItem(USER_STORAGE_KEY);
+ if (user) return user;
+ user = prompt('Enter your name or ID (ask your team lead for the link with your name in it if you want this remembered automatically):') || 'Unknown';
+ localStorage.setItem(USER_STORAGE_KEY, user);
+ return user;
+}
+
+const userId = getUserId();
+document.getElementById('userBadge').innerText = 'Logged in as: ' + userId;
+
 let stepIndex = 0;
 let current = {};
 let interactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
@@ -98,7 +118,7 @@ function render() {
     const div = document.createElement('div');
     div.className = 'card';
     div.innerHTML = `
-      <strong>${item.role}</strong><br>
+      <strong>${item.role}</strong> (${item.user || ''})<br>
       ${item.method}<br>
       ${item.typeOfCommunication}<br>
       ${item.direction}<br>
@@ -113,7 +133,7 @@ function render() {
 function handleSelect(field, value) {
  current[field] = value;
  if (stepIndex === steps.length - 1) {
-    const record = { ...current, id: Date.now(), timestamp: new Date().toISOString() };
+    const record = { ...current, id: Date.now(), timestamp: new Date().toISOString(), user: userId };
     interactions.unshift(record);
     save();
     submitToSheet(record);
@@ -142,7 +162,7 @@ function submitToSheet(record) {
 
 function exportCsv() {
  if (interactions.length === 0) { setStatus('Nothing to export yet.', true); return; }
- const headers = ['timestamp','role','method','typeOfCommunication','direction','correct','urgency'];
+ const headers = ['timestamp','user','role','method','typeOfCommunication','direction','correct','urgency'];
  const rows = interactions.map(i => headers.map(h => '"' + String(i[h] ?? '').replace(/"/g, '""') + '"').join(','));
  const csv = headers.join(',') + '\n' + rows.join('\n');
  const blob = new Blob([csv], { type: 'text/csv' });

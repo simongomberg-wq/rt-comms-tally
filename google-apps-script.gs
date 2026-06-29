@@ -13,7 +13,7 @@ function doPost(e) {
 
   if (sheet.getLastRow() === 0) {
     sheet.appendRow([
-      'Timestamp', 'Role', 'Method of Communication', 'Type of Communication',
+      'Timestamp', 'User', 'Role', 'Method of Communication', 'Type of Communication',
       'Direction', 'Correct Recipient', 'Urgency'
     ]);
   }
@@ -22,6 +22,7 @@ function doPost(e) {
 
   sheet.appendRow([
     data.timestamp || new Date().toISOString(),
+    data.user || '',
     data.role || '',
     data.method || '',
     data.typeOfCommunication || '',
