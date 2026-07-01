@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TrustRota</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --surface-2:#ffffff;--surface-1:#f1efe8;--surface-0:#f5f4f1;
+  --text-primary:#1a1a1a;--text-secondary:#6b6a66;--text-muted:#9b9a95;
+  --border:rgba(0,0,0,0.12);--border-strong:rgba(0,0,0,0.25);--border-accent:#378ADD;
+  --bg-accent:#E6F1FB;--text-accent:#0C447C;
+  --bg-success:#EAF3DE;--text-success:#27500A;
+  --bg-warning:#FAEEDA;--text-warning:#633806;
+  --bg-danger:#FCEBEB;--text-danger:#791F1F;
+  --radius:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--surface-0);color:var(--text-primary);display:flex;height:100vh;overflow:hidden}
+/* Sidebar */
+#sidebar{width:240px;min-width:240px;background:var(--surface-1);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;overflow-y:auto}
+.sidebar-logo{padding:0 16px 16px;font-size:18px;font-weight:700;color:var(--text-accent);letter-spacing:-0.5px}
+.sidebar-logo span{color:var(--text-muted);font-weight:400}
+.sidebar-section{padding:8px 16px 4px;font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em}
+select.sidebar-select{margin:4px 12px 8px;padding:6px 10px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary);font-size:13px;width:calc(100% - 24px)}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;border:none;background:none;width:100%;text-align:left;border-radius:0;transition:background 0.15s}
+.nav-btn:hover{background:var(--border);color:var(--text-primary)}
+.nav-btn.active{background:var(--bg-accent);color:var(--text-accent);font-weight:600}
+.nav-btn i{font-size:16px;width:18px;text-align:center}
+/* Main */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{background:var(--surface-2);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+.breadcrumb{font-size:13px;color:var(--text-muted)}
+.breadcrumb strong{color:var(--text-primary)}
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 4px;cursor:pointer;font-size:13px;font-weight:500}
+.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+#content{flex:1;overflow-y:auto;padding:24px}
+/* Cards */
+.card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+/* KPI */
+.kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.kpi-val{font-size:28px;font-weight:700;line-height:1}
+.kpi-label{font-size:12px;color:var(--text-muted);margin-top:4px}
+/* Badges */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-success{background:var(--bg-success);color:var(--text-success)}
+.badge-warning{background:var(--bg-warning);color:var(--text-warning)}
+.badge-danger{background:var(--bg-danger);color:var(--text-danger)}
+.badge-accent{background:var(--bg-accent);color:var(--text-accent)}
+.badge-muted{background:var(--surface-1);color:var(--text-muted)}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:opacity 0.15s}
+.btn:hover{opacity:0.85}
+.btn-primary{background:var(--text-accent);color:#fff;border-color:var(--text-accent)}
+.btn-secondary{background:var(--surface-1);color:var(--text-primary);border-color:var(--border-strong)}
+.btn-success{background:#27500A;color:#fff}
+.btn-danger{background:#791F1F;color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;background:var(--surface-1);color:var(--text-secondary);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border)}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface-0)}
+/* Subtabs */
+.subtabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0}
+.subtab{padding:8px 16px;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.subtab.active{color:var(--text-accent);border-bottom-color:var(--border-accent)}
+/* Rota grid */
+.rota-grid{display:grid;grid-template-columns:120px repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;font-size:12px}
+.rota-cell{background:var(--surface-2);padding:8px 6px;min-height:56px}
+.rota-header{background:var(--surface-1);font-weight:600;font-size:11px;color:var(--text-secondary);padding:8px 6px}
+.rota-shift{border-radius:4px;padding:3px 6px;margin-bottom:2px;font-size:11px;font-weight:500}
+.shift-day{background:#dbeafe;color:#1e40af}
+.shift-eve{background:#ede9fe;color:#5b21b6}
+.shift-night{background:#1e293b;color:#e2e8f0}
+.shift-on-call{background:#fef3c7;color:#92400e}
+.shift-bank{background:#d1fae5;color:#065f46;border:1px dashed #059669}
+.shift-off{color:var(--text-muted)}
+/* Info box */
+.info-box{background:var(--bg-accent);border:1px solid var(--border-accent);border-radius:var(--radius);padding:12px 14px;font-size:12px;color:var(--text-accent);display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
+.warn-box{background:var(--bg-warning);border:1px solid #c97316;border-radius:var(--radius);padding:12px 14px;font-size:12px;color:var(--text-warning);display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
+/* Form */
+label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px}
+input[type=text],input[type=email],input[type=number],select.form-select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border-strong);border-radius:var(--radius);font-size:13px;background:var(--surface-2);color:var(--text-primary)}
+textarea{resize:vertical;min-height:72px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+/* Collapsible */
+.collapsible-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.collapsible-body{margin-top:12px}
+.collapsible-body.hidden{display:none}
+/* Analytics */
+.analytics-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.analytic-chip{background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
+/* Colour accents */
+.trt-c-purple{color:#6d28d9}.trt-bg-purple{background:#ede9fe;color:#5b21b6}
+.trt-c-teal{color:#0d9488}.trt-bg-teal{background:#ccfbf1;color:#0f766e}
+.trt-c-coral{color:#dc4d2f}.trt-bg-coral{background:#fee2e2;color:#991b1b}
+.trt-c-blue{color:#2563eb}.trt-bg-blue{background:#dbeafe;color:#1e40af}
+/* Swap card */
+.swap-card{border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;background:var(--surface-2)}
+.swap-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.match-card{border:1px solid var(--border-accent);border-radius:var(--radius);padding:14px;margin-bottom:10px;background:var(--bg-accent)}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div class="sidebar-logo">Trust<span>Rota</span></div>
+  <div class="sidebar-section">Department</div>
+  <select class="sidebar-select" id="deptSelect" onchange="changeDept(this.value)">
+    <option value="onc">Oncology</option>
+    <option value="ed">Emergency Dept</option>
+    <option value="surg">General Surgery</option>
+    <option value="anaes">Anaesthetics</option>
+    <option value="med">General Medicine</option>
+  </select>
+  <div class="sidebar-section">User</div>
+  <select class="sidebar-select" id="userSelect" onchange="changeUser(this.value)">
+  </select>
+  <div style="height:8px"></div>
+  <button class="nav-btn active" onclick="selectTab('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+  <button class="nav-btn" onclick="selectTab('rota')" id="nav-rota"><i class="ti ti-calendar"></i>Rota Builder</button>
+  <button class="nav-btn" onclick="selectTab('leave')" id="nav-leave"><i class="ti ti-beach"></i>Leave &amp; Swaps</button>
+  <button class="nav-btn" onclick="selectTab('bank')" id="nav-bank"><i class="ti ti-briefcase"></i>Bank Work</button>
+  <button class="nav-btn admin-only" onclick="selectTab('directory')" id="nav-directory"><i class="ti ti-users"></i>Staff Directory</button>
+  <button class="nav-btn staff-only" onclick="selectTab('profile')" id="nav-profile"><i class="ti ti-user-circle"></i>My Profile</button>
+</div>
+<div id="main">
+  <div id="topbar">
+    <div class="breadcrumb" id="breadcrumb">Oncology &rsaquo; <strong>Dashboard</strong></div>
+    <div id="userChip" class="user-chip">
+      <div class="avatar" id="avatarEl" style="background:#0C447C">PS</div>
+      <span id="userNameEl">Priya Shah</span>
+    </div>
+  </div>
+  <div id="content"></div>
+</div>
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const firstNames=['James','Sarah','Aisha','Thomas','Nina','Michael','Priya','David','Fatima','Robert','Emily','Omar','Laura','Daniel','Mei','Christopher','Zara','Jonathan','Amara','William','Sophia','Raj','Catherine','Marcus','Leila','Patrick','Hannah','Yusuf','Claire','Benjamin','Nadia','Ethan','Olivia','Kwame','Isabelle','Samuel','Ayesha','George','Anya','Hassan'];
+const lastNames=['Khan','Reid','Okonkwo','Patel','Chen','Morrison','Sharma','Williams','Ahmed','Thompson','Hassan','Garcia','Murphy','Nguyen','Anderson','Taylor','Singh','Mitchell','Brown','Walker','Das','Roberts','Ali','Campbell','Foster','Brennan','Shah','Malik','Davies','Jackson','Kowalski','Hussain','Lewis','Okoro','Flynn','Santos','Rao','Hughes','Blair','Nwosu'];
+const deptMeta={
+  onc:{name:'Oncology',type:'inpatient',color:'#6d28d9',shift:'Mon–Fri 08:00–17:00 + on-calls'},
+  ed:{name:'Emergency Dept',type:'shift',color:'#dc4d2f',shift:'Rotating shifts (07:00/15:00/23:00)'},
+  surg:{name:'General Surgery',type:'inpatient',color:'#0d9488',shift:'Mon–Fri 08:00–18:00 + on-calls'},
+  anaes:{name:'Anaesthetics',type:'shift',color:'#2563eb',shift:'Rotating shifts + theatre lists'},
+  med:{name:'General Medicine',type:'inpatient',color:'#92400e',shift:'Mon–Fri 08:00–17:00 + on-calls'},
+};
+const baseRates={Consultant:{social:80,unsocial:110},SpR:{social:55,unsocial:75},SHO:{social:40,unsocial:55}};
+
+function seededRand(seed){let s=seed;return()=>{s=(s*9301+49297)%233280;return s/233280};}
+function buildGrade(grade,count,deptKey,seedBase){
+  const rng=seededRand(seedBase);
+  const used=new Set();
+  const staff=[];
+  for(let i=0;i<count;i++){
+    let fn,ln,key;
+    do{fn=firstNames[Math.floor(rng()*firstNames.length)];ln=lastNames[Math.floor(rng()*lastNames.length)];key=fn+ln;}while(used.has(key));
+    used.add(key);
+    const gmcBase=1000000+Math.floor(rng()*8999999);
+    staff.push({id:`${deptKey}-${grade}-${i}`,name:`${fn} ${ln}`,grade,dept:deptKey,gmc:`${gmcBase}`,email:`${fn.toLowerCase()}.${ln.toLowerCase()}@gstt.nhs.uk`,fte:grade==='Consultant'?0.8+Math.round(rng()*2)*0.1:1.0,quals:grade==='Consultant'?'FRCR, MD':grade==='SpR'?'MRCP':''});
+  }
+  return staff;
+}
+const directoryCache={};
+function getDirectory(deptKey){
+  if(!directoryCache[deptKey]){
+    const seed=deptKey.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+    directoryCache[deptKey]=[
+      ...buildGrade('Consultant',20,deptKey,seed*3),
+      ...buildGrade('SpR',12,deptKey,seed*7),
+      ...buildGrade('SHO',10,deptKey,seed*13),
+    ];
+  }
+  return directoryCache[deptKey];
+}
+
+// Admin user
+const adminUser={id:'admin',name:'Priya Shah',grade:'Admin',dept:'all',gmc:'N/A',email:'priya.shah@gstt.nhs.uk',fte:1.0,quals:'MBA (Healthcare Management)',isAdmin:true};
+
+function getUsersForDept(deptKey){
+  const dir=getDirectory(deptKey);
+  // Pick 2 Consultants, 2 SpRs, 2 SHOs as selectable personas
+  const cons=dir.filter(d=>d.grade==='Consultant').slice(0,2);
+  const sprs=dir.filter(d=>d.grade==='SpR').slice(0,2);
+  const shos=dir.filter(d=>d.grade==='SHO').slice(0,2);
+  return [adminUser,...cons,...sprs,...shos];
+}
+
+// ── App State ─────────────────────────────────────────────────────────────────
+let state={dept:'onc',userId:'admin',tab:'dashboard'};
+let rotaState={};
+let leaveSwapState={};
+
+function getRotaState(dept){
+  if(!rotaState[dept]){
+    const dir=getDirectory(dept);
+    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const shifts=['Day','Evening','Night','On-Call'];
+    const rows=dir.slice(0,8).map(p=>{
+      const week={};
+      days.forEach((d,di)=>{if(di<5)week[d]=p.grade==='Consultant'?'Day':'Day';else week[d]=di===5?'On-Call':'Off';});
+      return{...p,week};
+    });
+    rotaState[dept]={rows,version:1,history:[],inputs:{uploadedRota:'',workingPatterns:'',bmaRules:'Max 48hrs/wk, 11hr rest between shifts, max 4 nights in a row',staffingReqs:''},analytics:{gaps:3,understaffed:2,bmaBreaches:0,overstaffed:1}};
+  }
+  return rotaState[dept];
+}
+
+function getLeaveSwapState(dept){
+  if(!leaveSwapState[dept]){
+    const dir=getDirectory(dept);
+    const cons=dir.filter(d=>d.grade==='Consultant');
+    const sprs=dir.filter(d=>d.grade==='SpR');
+    const shos=dir.filter(d=>d.grade==='SHO');
+    leaveSwapState[dept]={
+      leaveRequests:[
+        {id:'lr1',name:cons[0].name,grade:'Consultant',dates:'14–18 Jul 2025',days:5,reason:'Annual leave',status:'approved',notice:'8 weeks'},
+        {id:'lr2',name:sprs[0].name,grade:'SpR',dates:'21–25 Jul 2025',days:5,reason:'Annual leave',status:'pending-admin',notice:'4 weeks',flagReason:'Less than 6 weeks notice'},
+        {id:'lr3',name:shos[0].name,grade:'SHO',dates:'1–3 Aug 2025',days:3,reason:'Annual leave',status:'on-hold-swap',notice:'9 weeks',linkedSwapId:'sw1'},
+        {id:'lr4',name:sprs[1].name,grade:'SpR',dates:'28 Jul–1 Aug 2025',days:5,reason:'Annual leave',status:'approved',notice:'7 weeks'},
+        {id:'lr5',name:cons[1].name,grade:'Consultant',dates:'4–8 Aug 2025',days:5,reason:'Annual leave',status:'refused',notice:'3 weeks',flagReason:'Minimum staffing not met'},
+      ],
+      swapPool:[
+        {id:'sw1',requester:shos[0].name,grade:'SHO',myShift:'Thu 31 Jul (On-Call)',wantDate:'Fri 1 Aug',status:'open',zeroDay:true,linkedLeaveId:'lr3'},
+        {id:'sw2',requester:shos[1].name,grade:'SHO',myShift:'Fri 1 Aug (On-Call)',wantDate:'Thu 31 Jul',status:'open',zeroDay:false},
+        {id:'sw3',requester:sprs[0].name,grade:'SpR',myShift:'Sat 5 Jul (On-Call)',wantDate:'Sun 6 Jul',status:'open',zeroDay:true,linkedLeaveId:'lr2'},
+        {id:'sw4',requester:sprs[2]?.name||sprs[1].name,grade:'SpR',myShift:'Sun 6 Jul (On-Call)',wantDate:'Sat 5 Jul',status:'open',zeroDay:false},
+        {id:'sw5',requester:cons[0].name,grade:'Consultant',myShift:'Mon 14 Jul (On-Call)',wantDate:'Tue 15 Jul',status:'open',zeroDay:false},
+      ],
+      matches:[
+        {id:'m1',a:{swapId:'sw1',name:shos[0].name,grade:'SHO',shift:'Thu 31 Jul (On-Call)',zeroDay:true,linkedLeaveId:'lr3'},b:{swapId:'sw2',name:shos[1].name,grade:'SHO',shift:'Fri 1 Aug (On-Call)',zeroDay:false},status:'pending-a'}
+      ],
+      bankRegistrations:[],
+      bankApprovals:[
+        {id:'ba1',name:sprs[0].name,grade:'SpR',dept:dept,requestedDepts:[dept],status:'pending'},
+        {id:'ba2',name:shos[0].name,grade:'SHO',dept:dept,requestedDepts:[dept,'ed'],status:'pending'},
+      ],
+      bankShifts:[
+        {id:'bs1',role:'SpR',dept:dept,date:'Sat 12 Jul',start:'08:00',end:'20:00',type:'unsocial',filled:false},
+        {id:'bs2',role:'SHO',dept:dept,date:'Sun 13 Jul',start:'08:00',end:'20:00',type:'unsocial',filled:false},
+        {id:'bs3',role:'Consultant',dept:dept,date:'Fri 11 Jul',start:'08:00',end:'17:00',type:'social',filled:false},
+        {id:'bs4',role:'SHO',dept:dept,date:'Mon 14 Jul',start:'15:00',end:'23:00',type:'unsocial',filled:false},
+        {id:'bs5',role:'SpR',dept:dept,date:'Tue 15 Jul',start:'08:00',end:'17:00',type:'social',filled:false},
+      ]
+    };
+  }
+  return leaveSwapState[dept];
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function getCurrentUser(){
+  const users=getUsersForDept(state.dept);
+  return users.find(u=>u.id===state.userId)||adminUser;
+}
+function isAdmin(){return state.userId==='admin';}
+
+function changeDept(deptKey){
+  state.dept=deptKey;
+  state.userId='admin';
+  populateUserSelect();
+  updateTopbar();
+  renderActivePanel();
+}
+function changeUser(userId){
+  state.userId=userId;
+  updateTopbar();
+  updateNavVisibility();
+  renderActivePanel();
+}
+function populateUserSelect(){
+  const sel=document.getElementById('userSelect');
+  const users=getUsersForDept(state.dept);
+  sel.innerHTML=users.map(u=>`<option value="${u.id}">${u.name} (${u.grade})</option>`).join('');
+  sel.value=state.userId;
+}
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function avatarColor(grade){const m={Admin:'#0C447C',Consultant:'#6d28d9',SpR:'#0d9488',SHO:'#dc4d2f'};return m[grade]||'#6b6a66';}
+
+function updateTopbar(){
+  const meta=deptMeta[state.dept];
+  const user=getCurrentUser();
+  document.getElementById('breadcrumb').innerHTML=`${meta.name} &rsaquo; <strong id="breadTabLabel">${capFirst(state.tab)}</strong>`;
+  document.getElementById('avatarEl').textContent=initials(user.name);
+  document.getElementById('avatarEl').style.background=avatarColor(user.grade);
+  document.getElementById('userNameEl').textContent=user.name;
+}
+function capFirst(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+
+function updateNavVisibility(){
+  const admin=isAdmin();
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=admin?'':'none');
+  document.querySelectorAll('.staff-only').forEach(el=>el.style.display=admin?'none':'');
+  // Rota builder — admin only
+  document.getElementById('nav-rota').style.display=admin?'':'none';
+}
+
+function selectTab(tab){
+  state.tab=tab;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const nb=document.getElementById('nav-'+tab);
+  if(nb)nb.classList.add('active');
+  document.getElementById('breadcrumb').querySelector('#breadTabLabel')?document.getElementById('breadTabLabel').textContent=capFirst(tab):null;
+  updateTopbar();
+  renderActivePanel();
+}
+function renderActivePanel(){
+  const t=state.tab;
+  if(t==='dashboard')renderDashboard();
+  else if(t==='rota')renderRota();
+  else if(t==='leave')renderLeave();
+  else if(t==='bank')renderBank();
+  else if(t==='directory')renderDirectoryPanel();
+  else if(t==='profile')renderProfile();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const meta=deptMeta[state.dept];
+  const dir=getDirectory(state.dept);
+  const ls=getLeaveSwapState(state.dept);
+  const me=getCurrentUser();
+  const admin=isAdmin();
+  let html='';
+  if(admin){
+    html+=`<div class="grid-4" style="margin-bottom:16px">
+      <div class="kpi"><div class="kpi-val">${dir.length}</div><div class="kpi-label">Total Staff</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#dc4d2f">3</div><div class="kpi-label">Rota Gaps</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#92400e">${ls.leaveRequests.filter(r=>r.status==='pending-admin').length}</div><div class="kpi-label">Leave Awaiting Decision</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#6d28d9">${ls.bankApprovals.filter(b=>b.status==='pending').length}</div><div class="kpi-label">Bank Approvals Pending</div></div>
+    </div>`;
+    html+=`<div class="grid-2">
+    <div class="card"><div class="card-title"><i class="ti ti-alert-triangle" style="color:#dc4d2f"></i>Attention Required</div>
+      ${ls.leaveRequests.filter(r=>r.status==='pending-admin').map(r=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><strong>${r.name}</strong> — Leave ${r.dates} <span class="badge badge-warning">Needs decision</span><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${r.flagReason||''}</div></div>`).join('')}
+      ${ls.bankApprovals.filter(b=>b.status==='pending').map(b=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><strong>${b.name}</strong> — Bank registration (${b.grade}) <span class="badge badge-accent">Pending vetting</span></div>`).join('')}
+    </div>
+    <div class="card"><div class="card-title"><i class="ti ti-chart-bar"></i>Rota Overview — Week of 14 Jul</div>
+      <div class="analytics-row">
+        <div class="analytic-chip"><span style="color:#dc4d2f">●</span>3 gaps</div>
+        <div class="analytic-chip"><span style="color:#92400e">●</span>2 understaffed slots</div>
+        <div class="analytic-chip"><span style="color:#27500A">●</span>BMA compliant</div>
+        <div class="analytic-chip"><span style="color:#6d28d9">●</span>1 overstaffed</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="selectTab('rota')"><i class="ti ti-pencil"></i>Edit Rota</button>
+    </div></div>`;
+  } else {
+    const shifts=['Day Shift 08:00–17:00','On-Call 17:00–08:00','Theatre List 09:00–15:00'];
+    const todayShift=shifts[me.name.length%shifts.length];
+    const noMatch=ls.swapPool.filter(s=>s.status==='no-match'&&s.requester===me.name);
+    html+=`<div class="grid-2" style="margin-bottom:16px">
+      <div class="kpi"><div class="kpi-label" style="margin-bottom:6px">Today's Shift</div><div style="font-size:16px;font-weight:600">${todayShift}</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px">${meta.name}</div></div>
+      <div class="kpi"><div class="kpi-label" style="margin-bottom:6px">Annual Leave Remaining</div><div class="kpi-val">18 <span style="font-size:16px;font-weight:400">days</span></div></div>
+    </div>`;
+    if(noMatch.length>0){
+      const dir2=getDirectory(state.dept);
+      const sameGrade=dir2.filter(d=>d.grade===me.grade&&d.name!==me.name).slice(0,3);
+      html+=`<div class="warn-box"><i class="ti ti-alert-circle"></i><div><strong>Swap not yet matched</strong> — your on-call swap request is still in the pool. Consider reaching out to a colleague:<br><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">${sameGrade.map(d=>`<button class="btn btn-sm btn-secondary">${d.name}</button>`).join('')}</div></div></div>`;
+    }
+    html+=`<div class="card"><div class="card-title"><i class="ti ti-calendar-event"></i>Upcoming Schedule</div>
+      <table><thead><tr><th>Date</th><th>Shift</th><th>Location</th></tr></thead><tbody>
+        <tr><td>Mon 14 Jul</td><td><span class="rota-shift shift-day">Day 08:00–17:00</span></td><td>${meta.name}</td></tr>
+        <tr><td>Tue 15 Jul</td><td><span class="rota-shift shift-day">Day 08:00–17:00</span></td><td>${meta.name}</td></tr>
+        <tr><td>Wed 16 Jul</td><td><span class="rota-shift shift-on-call">On-Call 17:00–08:00</span></td><td>${meta.name}</td></tr>
+        <tr><td>Thu 17 Jul</td><td><span class="rota-shift shift-off">Rest Day</span></td><td>—</td></tr>
+        <tr><td>Fri 18 Jul</td><td><span class="rota-shift shift-day">Day 08:00–17:00</span></td><td>${meta.name}</td></tr>
+      </tbody></table>
+    </div>`;
+  }
+  document.getElementById('content').innerHTML=html;
+}
+
+// ── Rota Builder ──────────────────────────────────────────────────────────────
+function rotaInputsHtml(meta,rs){
+  return`<div class="card" style="margin-bottom:16px">
+    <div class="collapsible-header" onclick="toggleCollapsible('rotaInputs')">
+      <div class="card-title" style="margin:0"><i class="ti ti-robot" style="color:#6d28d9"></i>Rita — AI Rota Inputs</div>
+      <i class="ti ti-chevron-down" id="rotaInputsChevron"></i>
+    </div>
+    <div class="collapsible-body hidden" id="rotaInputs">
+      <div class="info-box" style="margin-top:12px"><i class="ti ti-info-circle"></i>Rita uses these inputs to generate and optimise the rota. Update any section and click Re-run AI to apply.</div>
+      <div style="margin-bottom:16px">
+        <div class="card-title" style="font-size:13px"><i class="ti ti-file-spreadsheet"></i>Previous Rota (Upload)</div>
+        <div style="border:2px dashed var(--border-strong);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text-muted);font-size:13px"><i class="ti ti-upload" style="font-size:24px;display:block;margin-bottom:8px"></i>Drag & drop Excel rota or <a href="#" style="color:var(--text-accent)">click to browse</a><br><small>Rita will use previous patterns to seed the new rota</small></div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div class="card-title" style="font-size:13px"><i class="ti ti-user-check"></i>Doctor Working Patterns</div>
+        <table>
+          <thead><tr><th>Name</th><th>Grade</th><th>FTE</th><th>Fixed Days / Preferences</th><th>Restrictions</th></tr></thead>
+          <tbody>
+            ${getDirectory(state.dept).slice(0,6).map(d=>`<tr>
+              <td>${d.name}</td><td><span class="badge ${d.grade==='Consultant'?'trt-bg-purple':d.grade==='SpR'?'trt-bg-teal':'trt-bg-coral'}">${d.grade}</span></td>
+              <td>${d.fte}</td>
+              <td><input type="text" value="${meta.type==='inpatient'?'Mon–Fri':'Flexible'}" style="width:140px;padding:4px 6px;font-size:12px"/></td>
+              <td><input type="text" placeholder="e.g. No nights" style="width:130px;padding:4px 6px;font-size:12px"/></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px"><i class="ti ti-plus"></i>Add row</button>
+      </div>
+      <div class="form-row">
+        <div>
+          <div class="card-title" style="font-size:13px"><i class="ti ti-scale"></i>BMA Rota Rules</div>
+          <textarea id="bmaRulesInput" style="font-size:12px">${rs.inputs.bmaRules}</textarea>
+        </div>
+        <div>
+          <div class="card-title" style="font-size:13px"><i class="ti ti-building-hospital"></i>Departmental Staffing Requirements</div>
+          <textarea id="staffingReqsInput" placeholder="e.g. Min 2 SHOs on twilight Mon–Fri&#10;Min 1 SHO twilight weekends&#10;Min 5 SpRs on-site weekdays" style="font-size:12px">${rs.inputs.staffingReqs}</textarea>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="alert('Rita is re-optimising the rota…')"><i class="ti ti-robot"></i>Run AI Optimisation</button>
+    </div>
+  </div>`;
+}
+
+function renderRota(){
+  if(!isAdmin()){document.getElementById('content').innerHTML='<div class="info-box"><i class="ti ti-lock"></i>Rota Builder is available to administrators only.</div>';return;}
+  const meta=deptMeta[state.dept];
+  const rs=getRotaState(state.dept);
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const shiftClass={Day:'shift-day',Evening:'shift-eve',Night:'shift-night','On-Call':'shift-on-call',Off:'shift-off'};
+  let gridHtml=`<div class="rota-grid"><div class="rota-header">Name</div>${days.map(d=>`<div class="rota-header">${d}</div>`).join('')}`;
+  rs.rows.forEach(p=>{
+    gridHtml+=`<div class="rota-cell" style="font-size:12px;font-weight:500">${p.name}<br><span style="font-size:10px;color:var(--text-muted)">${p.grade}</span></div>`;
+    days.forEach(d=>{const s=p.week[d]||'Off';gridHtml+=`<div class="rota-cell"><span class="rota-shift ${shiftClass[s]||'shift-off'}">${s}</span></div>`;});
+  });
+  gridHtml+='</div>';
+  const ana=rs.analytics;
+  const html=`
+    ${rotaInputsHtml(meta,rs)}
+    <div class="card">
+      <div class="card-title"><i class="ti ti-calendar"></i>Rota — Week of 14 Jul 2025 <span class="badge badge-accent">v${rs.version}</span></div>
+      ${gridHtml}
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="alert('Manual edit mode — click any cell to change shift')"><i class="ti ti-pencil"></i>Manual Edit</button>
+        <button class="btn btn-primary btn-sm" onclick="alert('Rita is re-optimising…')"><i class="ti ti-robot"></i>Re-run AI</button>
+        <button class="btn btn-success btn-sm" onclick="alert('Rota finalised and published!')"><i class="ti ti-check"></i>Finalise Rota</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-chart-bar"></i>Analytics — v${rs.version}</div>
+      <div class="analytics-row">
+        <div class="analytic-chip"><span style="color:#dc4d2f">●</span>${ana.gaps} rota gaps</div>
+        <div class="analytic-chip"><span style="color:#92400e">●</span>${ana.understaffed} understaffed slots</div>
+        <div class="analytic-chip"><span style="color:#27500A">●</span>${ana.bmaBreaches===0?'BMA compliant':ana.bmaBreaches+' BMA breaches'}</div>
+        <div class="analytic-chip"><span style="color:#6d28d9">●</span>${ana.overstaffed} overstaffed slots</div>
+      </div>
+      ${rs.history.length>0?`<div style="margin-top:8px;font-size:12px;color:var(--text-secondary)">Previous: ${rs.history.map(h=>`v${h.version} — ${h.gaps} gaps`).join(', ')}</div>`:''}
+    </div>`;
+  document.getElementById('content').innerHTML=html;
+}
+
+function toggleCollapsible(id){
+  const body=document.getElementById(id);
+  const chev=document.getElementById(id+'Chevron');
+  if(body){body.classList.toggle('hidden');if(chev)chev.style.transform=body.classList.contains('hidden')?'':'rotate(180deg)';}
+}
+
+// ── Leave & Swaps ─────────────────────────────────────────────────────────────
+function renderLeave(){
+  const ls=getLeaveSwapState(state.dept);
+  const me=getCurrentUser();
+  const admin=isAdmin();
+  const myGrade=admin?null:me.grade;
+  const html=`
+    <div class="subtabs">
+      <div class="subtab active" onclick="switchLeaveSub('requests',this)">Leave Requests</div>
+      <div class="subtab" onclick="switchLeaveSub('swaps',this)">Swap Marketplace</div>
+      ${admin?'<div class="subtab" onclick="switchLeaveSub(\'rules\',this)">Rules</div>':''}
+    </div>
+    <div id="lsw-requests">${renderRequestsSub(ls,me,admin)}</div>
+    <div id="lsw-swaps" style="display:none">${renderSwapsSub(ls,admin,myGrade)}</div>
+    ${admin?`<div id="lsw-rules" style="display:none">${renderRulesSub(ls)}</div>`:''}`;
+  document.getElementById('content').innerHTML=html;
+}
+
+function switchLeaveSub(tab,el){
+  document.querySelectorAll('.subtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['requests','swaps','rules'].forEach(t=>{const p=document.getElementById('lsw-'+t);if(p)p.style.display=t===tab?'':'none';});
+}
+
+const statusBadge={approved:'badge-success',pending:'badge-warning','pending-admin':'badge-warning','on-hold-swap':'badge-accent',refused:'badge-danger'};
+const statusLabel={approved:'Approved','pending':'Pending','pending-admin':'Awaiting Admin','on-hold-swap':'On Hold — Swap Pending',refused:'Refused'};
+
+function renderRequestsSub(ls,me,admin){
+  const visible=admin?ls.leaveRequests:ls.leaveRequests.filter(r=>r.name===me.name);
+  let html=`<div class="card"><div class="card-title"><i class="ti ti-beach"></i>Leave Requests${!admin?'<span style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px">— showing your requests only</span>':''}</div>`;
+  if(!admin){html+=`<button class="btn btn-primary btn-sm" style="margin-bottom:12px" onclick="alert('Leave request form would open here')"><i class="ti ti-plus"></i>Request Leave</button>`;}
+  html+=`<table><thead><tr><th>Name</th><th>Dates</th><th>Days</th><th>Notice Given</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
+  visible.forEach(r=>{
+    html+=`<tr>
+      <td>${r.name} <span class="badge ${r.grade==='Consultant'?'trt-bg-purple':r.grade==='SpR'?'trt-bg-teal':'trt-bg-coral'}">${r.grade}</span></td>
+      <td>${r.dates}</td><td>${r.days}</td><td>${r.notice}</td>
+      <td><span class="badge ${statusBadge[r.status]||'badge-muted'}">${statusLabel[r.status]||r.status}</span>${r.flagReason?`<div style="font-size:11px;color:var(--text-warning);margin-top:2px">${r.flagReason}</div>`:''}</td>
+      <td>${r.status==='refused'?`<button class="btn btn-sm btn-secondary" onclick="alert('Appeal submitted')">Appeal</button>`:admin&&r.status==='pending-admin'?`<button class="btn btn-sm btn-success" style="margin-right:4px" onclick="alert('Approved')">Approve</button><button class="btn btn-sm btn-danger" onclick="alert('Refused')">Refuse</button>`:'—'}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  return html;
+}
+
+function renderSwapsSub(ls,admin,myGrade){
+  let html=`<div class="info-box"><i class="ti ti-info-circle"></i><div><strong>Swap Marketplace</strong> — open swap requests are visible to ${admin?'all staff (admin view)':'colleagues at your grade level ('+myGrade+')'}. This is the only area where you can see colleagues' requests, as matching requires shared visibility.</div></div>`;
+  // Matches
+  const myMatches=admin?ls.matches:ls.matches.filter(m=>m.a.grade===myGrade||m.b.grade===myGrade);
+  if(myMatches.length>0){
+    html+=`<div class="card"><div class="card-title"><i class="ti ti-arrows-exchange" style="color:#6d28d9"></i>Proposed Matches</div>`;
+    myMatches.forEach(m=>{html+=renderMatchCard(m,admin,myGrade);});
+    html+='</div>';
+  }
+  // Pool
+  const pool=admin?ls.swapPool:ls.swapPool.filter(s=>s.grade===myGrade);
+  const open=pool.filter(s=>s.status==='open');
+  html+=`<div class="card"><div class="card-title" style="justify-content:space-between"><span><i class="ti ti-pool"></i>Open Swap Requests</span><button class="btn btn-primary btn-sm" onclick="alert('Your swap request form would open here')"><i class="ti ti-plus"></i>Request Swap</button></div>`;
+  open.forEach(s=>{
+    html+=`<div class="swap-card">
+      <div class="swap-card-header"><strong>${s.requester}</strong> <span class="badge ${s.grade==='Consultant'?'trt-bg-purple':s.grade==='SpR'?'trt-bg-teal':'trt-bg-coral'}">${s.grade}</span></div>
+      <div style="font-size:13px">Offering: <strong>${s.myShift}</strong>${s.zeroDay?' <span class="badge badge-accent">+ zero day</span>':''}</div>
+      <div style="font-size:13px">Wants cover for: <strong>${s.wantDate}</strong></div>
+      ${s.linkedLeaveId?`<div style="font-size:11px;color:var(--text-accent);margin-top:4px"><i class="ti ti-link"></i> Linked to leave request — swap must be confirmed before leave can be approved</div>`:''}
+    </div>`;
+  });
+  if(open.length===0)html+=`<div style="font-size:13px;color:var(--text-muted);padding:8px 0">No open swap requests at your grade level.</div>`;
+  html+=`<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="alert('Rita is running swap matching…')"><i class="ti ti-robot"></i>Run Matching</button></div>`;
+  return html;
+}
+
+function renderMatchCard(m,admin,myGrade){
+  return`<div class="match-card">
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:10px">
+      <div><div style="font-weight:600;font-size:13px">${m.a.name}</div><div style="font-size:12px">${m.a.shift}${m.a.zeroDay?' + zero day':''}</div>${m.a.linkedLeaveId?`<div style="font-size:11px;color:var(--text-accent)">Leave on hold</div>`:''}</div>
+      <div style="text-align:center"><i class="ti ti-arrows-exchange" style="font-size:20px;color:#6d28d9"></i></div>
+      <div style="text-align:right"><div style="font-weight:600;font-size:13px">${m.b.name}</div><div style="font-size:12px">${m.b.shift}${m.b.zeroDay?' + zero day':''}</div></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:space-between">
+      <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${m.a.name}'s response</div>
+        ${m.status==='pending-a'?`<button class="btn btn-success btn-sm" onclick="alert('Accepted!')">Accept</button> <button class="btn btn-danger btn-sm" onclick="alert('Declined — back to pool')">Decline</button>`:`<span class="badge badge-success">Accepted</span>`}</div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${m.b.name}'s response</div>
+        ${m.status==='pending-b'?`<button class="btn btn-success btn-sm" onclick="alert('Accepted!')">Accept</button> <button class="btn btn-danger btn-sm" onclick="alert('Declined')">Decline</button>`:`<span class="badge badge-muted">Awaiting response</span>`}</div>
+    </div>
+  </div>`;
+}
+
+function renderRulesSub(ls){
+  return`<div class="card"><div class="card-title"><i class="ti ti-scale"></i>Leave & Swap Rules</div>
+    <div class="form-row" style="margin-bottom:16px">
+      <div><label>BMA Rules</label><textarea style="font-size:12px">Min 6 weeks notice for annual leave&#10;No leave if on-call that day (triggers swap)&#10;Max 28 days annual leave per year&#10;Pro-rata for part-time (FTE-adjusted)</textarea></div>
+      <div><label>Trust Rules</label><textarea style="font-size:12px">Annual leave year: 1 Apr – 31 Mar&#10;Zero carryover of unused leave&#10;Leave must be approved before booking travel&#10;Bank holidays counted separately</textarea></div>
+    </div>
+    <div><label>Departmental Staffing Minimums</label><textarea style="font-size:12px">Min 5 SpRs on-site weekdays&#10;Min 2 SHOs on twilight shift Mon–Fri&#10;Min 1 SHO twilight shift weekends&#10;At least 1 Consultant on-call at all times</textarea></div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="alert('Rules saved')"><i class="ti ti-device-floppy"></i>Save Rules</button>
+  </div>`;
+}
+
+// ── Bank Work ─────────────────────────────────────────────────────────────────
+function renderBank(){
+  const ls=getLeaveSwapState(state.dept);
+  const me=getCurrentUser();
+  const admin=isAdmin();
+  let html='';
+  if(admin){
+    html+=`<div class="card"><div class="card-title"><i class="ti ti-clipboard-check"></i>Bank Registration Approvals</div>
+      <table><thead><tr><th>Name</th><th>Grade</th><th>Requested Depts</th><th>Status</th><th>Action</th></tr></thead><tbody>
+      ${ls.bankApprovals.map(b=>`<tr>
+        <td>${b.name}</td><td>${b.grade}</td><td>${b.requestedDepts.map(d=>deptMeta[d]?.name||d).join(', ')}</td>
+        <td><span class="badge badge-warning">Pending</span></td>
+        <td><button class="btn btn-success btn-sm" style="margin-right:4px" onclick="alert('Approved — ${b.name} can now be offered bank shifts')">Approve</button><button class="btn btn-danger btn-sm" onclick="alert('Rejected')">Reject</button></td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>`;
+    html+=`<div class="card"><div class="card-title"><i class="ti ti-calendar-plus"></i>Post Bank Shift</div>
+      <div class="form-row">
+        <div><label>Grade Required</label><select class="form-select"><option>SHO</option><option>SpR</option><option>Consultant</option></select></div>
+        <div><label>Date</label><input type="text" placeholder="e.g. Sat 19 Jul"/></div>
+        <div><label>Start Time</label><input type="text" placeholder="08:00"/></div>
+        <div><label>End Time</label><input type="text" placeholder="20:00"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="alert('Bank shift posted')"><i class="ti ti-plus"></i>Post Shift</button>
+    </div>`;
+  } else {
+    const grade=me.grade;
+    const myShifts=ls.bankShifts.filter(s=>s.role===grade);
+    const canDoShifts=myShifts.filter(s=>!s.filled);
+    html+=`<div class="info-box"><i class="ti ti-info-circle"></i>Showing bank shifts available for <strong>${grade}</strong>. Shifts you can do are listed first. You must be vetted by an admin before accepting shifts in a department.</div>`;
+    html+=`<div class="card"><div class="card-title"><i class="ti ti-plus-circle"></i>Register for Bank Work</div>
+      <div style="font-size:13px;margin-bottom:12px">Register interest in bank shifts for additional departments. A senior clinician must approve your registration before you are offered shifts.</div>
+      ${Object.entries(deptMeta).map(([k,v])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span>${v.name}${k===state.dept?' <span class="badge badge-success">Home dept</span>':''}</span>
+        <button class="btn btn-secondary btn-sm" onclick="alert('Registration request submitted for ${v.name}')">Register</button>
+      </div>`).join('')}
+    </div>`;
+    html+=`<div class="card"><div class="card-title"><i class="ti ti-briefcase"></i>Available Bank Shifts — ${grade}</div>`;
+    if(canDoShifts.length===0){html+=`<div style="font-size:13px;color:var(--text-muted)">No bank shifts currently available for your grade.</div>`;}
+    else{
+      const rates=baseRates[grade]||{social:40,unsocial:55};
+      canDoShifts.forEach(s=>{
+        const rate=s.type==='unsocial'?rates.unsocial:rates.social;
+        html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--surface-2)">
+          <div>
+            <div style="font-weight:600;font-size:13px">${s.date} &bull; ${s.start}–${s.end}</div>
+            <div style="font-size:12px;color:var(--text-secondary)">${deptMeta[s.dept]?.name||s.dept} &bull; <span class="badge ${s.type==='unsocial'?'badge-warning':'badge-accent'}">${s.type==='unsocial'?'Unsocial':'Social'}</span> &bull; £${rate}/hr</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="alert('Shift accepted and rota updated (bank-tagged)')"><i class="ti ti-check"></i>Accept</button>
+        </div>`;
+      });
+    }
+    html+='</div>';
+  }
+  document.getElementById('content').innerHTML=html;
+}
+
+// ── Staff Directory ───────────────────────────────────────────────────────────
+function renderDirectoryPanel(){
+  if(!isAdmin()){document.getElementById('content').innerHTML='<div class="info-box"><i class="ti ti-lock"></i>Staff Directory is available to administrators only.</div>';return;}
+  const dir=getDirectory(state.dept);
+  const html=`<div class="card">
+    <div class="card-title" style="justify-content:space-between"><span><i class="ti ti-users"></i>Staff Directory — ${deptMeta[state.dept].name} (${dir.length} staff)</span>
+    <input type="text" placeholder="Search name or grade…" onkeyup="filterDirectory(this.value)" style="width:220px;padding:6px 10px;font-size:13px;border:1px solid var(--border-strong);border-radius:var(--radius)"/></div>
+    <table id="dirTable"><thead><tr><th>Name</th><th>Grade</th><th>GMC</th><th>Email</th><th>FTE</th></tr></thead>
+    <tbody id="dirBody">${dir.map(d=>`<tr>
+      <td>${d.name}</td>
+      <td><span class="badge ${d.grade==='Consultant'?'trt-bg-purple':d.grade==='SpR'?'trt-bg-teal':'trt-bg-coral'}">${d.grade}</span></td>
+      <td style="font-family:monospace">${d.gmc}</td>
+      <td style="font-size:12px">${d.email}</td>
+      <td>${d.fte}</td>
+    </tr>`).join('')}</tbody></table>
+  </div>`;
+  document.getElementById('content').innerHTML=html;
+}
+function filterDirectory(q){
+  const rows=document.querySelectorAll('#dirBody tr');
+  const lq=q.toLowerCase();
+  rows.forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(lq)?'':'none';});
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+function renderProfile(){
+  if(isAdmin()){document.getElementById('content').innerHTML='<div class="info-box"><i class="ti ti-info-circle"></i>Profile view is for clinician accounts. Select a staff member from the sidebar.</div>';return;}
+  const me=getCurrentUser();
+  const meta=deptMeta[state.dept];
+  const isInpatient=meta.type==='inpatient';
+  const qualsList=['MRCP','FRCR','FRCS','FRCA','MRCPCH','FCEM','MD','PhD'];
+  const myQuals=me.quals?me.quals.split(',').map(q=>q.trim()):[];
+  const daysOfWeek=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const html=`<div class="grid-2">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+        <div class="avatar" style="width:56px;height:56px;font-size:20px;background:${avatarColor(me.grade)}">${initials(me.name)}</div>
+        <div><div style="font-size:18px;font-weight:700">${me.name}</div><div style="font-size:13px;color:var(--text-secondary)">${me.grade} &bull; ${meta.name}</div></div>
+      </div>
+      <div class="form-row">
+        <div><label>Full Name</label><input type="text" value="${me.name}"/></div>
+        <div><label>Grade</label><input type="text" value="${me.grade}" disabled style="background:var(--surface-1);color:var(--text-muted)"/></div>
+      </div>
+      <div class="form-row">
+        <div><label>GMC Number</label><input type="text" value="${me.gmc}"/></div>
+        <div><label>Email Address</label><input type="email" value="${me.email}"/></div>
+      </div>
+      <div style="margin-bottom:12px"><label>Post-Graduate Qualifications</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${qualsList.map(q=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;cursor:pointer"><input type="checkbox" ${myQuals.includes(q)?'checked':''}/>${q}</label>`).join('')}</div>
+      </div>
+      <div class="form-row">
+        <div><label>FTE <span style="font-weight:400;color:var(--text-muted)">(set by admin)</span></label><input type="number" value="${me.fte}" disabled style="background:var(--surface-1);color:var(--text-muted)"/></div>
+      </div>
+      <button class="btn btn-primary" onclick="alert('Profile saved')"><i class="ti ti-device-floppy"></i>Save Changes</button>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-calendar"></i>${isInpatient?'Fixed Working Days':'Preferred Working Days'}</div>
+      ${isInpatient
+        ?`<div class="info-box"><i class="ti ti-info-circle"></i>${meta.name} is an inpatient specialty — working days are fixed Mon–Fri with on-call as rostered.</div>
+           <div style="display:flex;gap:8px;flex-wrap:wrap">${['Mon','Tue','Wed','Thu','Fri'].map(d=>`<div style="background:var(--bg-accent);color:var(--text-accent);border-radius:var(--radius);padding:8px 14px;font-weight:600;font-size:13px">${d}</div>`).join('')}</div>`
+        :`<div class="info-box"><i class="ti ti-info-circle"></i>${meta.name} is a shift-based specialty. Select your preferred working days — the rota rules will ensure equitable weekend and night distribution corrected for your FTE (${me.fte}).</div>
+           <div style="display:flex;flex-direction:column;gap:6px">${daysOfWeek.map((d,i)=>`<label style="display:flex;align-items:center;gap:10px;font-weight:400;font-size:13px;cursor:pointer"><input type="checkbox" ${i<5?'checked':''}/>${d}</label>`).join('')}</div>
+           <div class="warn-box" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Your preferences are a guide — final allocation ensures equitable weekend/night cover for your FTE.</div>`
+      }
+      <div class="card-title" style="margin-top:20px"><i class="ti ti-moon"></i>Equity Card</div>
+      <div class="grid-2">
+        <div class="kpi"><div class="kpi-val">4</div><div class="kpi-label">Weekends this year</div></div>
+        <div class="kpi"><div class="kpi-val">6</div><div class="kpi-label">Nights this year</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px">Department average: 4.2 weekends / 5.8 nights (FTE-adjusted)</div>
+    </div>
+  </div>`;
+  document.getElementById('content').innerHTML=html;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+populateUserSelect();
+updateNavVisibility();
+updateTopbar();
+renderDashboard();
+</script>
+</body>
+</html>
