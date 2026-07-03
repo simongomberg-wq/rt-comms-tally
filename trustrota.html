@@ -107,6 +107,11 @@ textarea{resize:vertical;min-height:72px}
 .swap-card{border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;background:var(--surface-2)}
 .swap-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .match-card{border:1px solid var(--border-accent);border-radius:var(--radius);padding:14px;margin-bottom:10px;background:var(--bg-accent)}
+/* Rota builder iteration */
+.rota-cell-editable{cursor:pointer;outline:2px dashed transparent;outline-offset:-2px;transition:outline-color 0.15s}
+.rota-cell-editable:hover{outline-color:var(--border-accent);background:var(--surface-0)}
+.iteration-table td,.iteration-table th{font-size:12px}
+.iteration-table td.current-row,.iteration-table tr.current-row td{background:var(--bg-accent)}
 </style>
 </head>
 <body>
@@ -153,6 +158,7 @@ const deptMeta={
   med:{name:'General Medicine',type:'inpatient',color:'#92400e',shift:'Mon–Fri 08:00–17:00 + on-calls'},
 };
 const baseRates={Consultant:{social:80,unsocial:110},SpR:{social:55,unsocial:75},SHO:{social:40,unsocial:55}};
+const ROTA_DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 function seededRand(seed){let s=seed;return()=>{s=(s*9301+49297)%233280;return s/233280};}
 function buildGrade(grade,count,deptKey,seedBase){
@@ -198,19 +204,128 @@ let state={dept:'onc',userId:'admin',tab:'dashboard'};
 let rotaState={};
 let leaveSwapState={};
 
+// Computes gap/understaffing/overstaffing/BMA-breach counts from an actual rota grid,
+// so analytics respond live to manual edits and each AI run.
+function computeAnalytics(rows,meta){
+  let gaps=0,understaffed=0,overstaffed=0,bmaBreaches=0;
+  const minWorking=Math.max(2,Math.ceil(rows.length*0.5));
+  ROTA_DAYS.forEach((d,di)=>{
+    const isWeekend=di>=5;
+    const onCall=rows.filter(p=>p.week[d]==='On-Call').length;
+    const working=rows.filter(p=>['Day','Evening','Night'].includes(p.week[d])).length;
+    if(onCall===0)gaps++;
+    if(onCall>1)overstaffed++;
+    if(!isWeekend&&working<minWorking)understaffed++;
+  });
+  rows.forEach(p=>{
+    let consecNights=0,maxConsecNights=0;
+    ROTA_DAYS.forEach(d=>{if(p.week[d]==='Night'){consecNights++;maxConsecNights=Math.max(maxConsecNights,consecNights);}else consecNights=0;});
+    if(maxConsecNights>4)bmaBreaches++;
+    for(let i=0;i<ROTA_DAYS.length-1;i++){
+      if(p.week[ROTA_DAYS[i]]==='On-Call'&&p.week[ROTA_DAYS[i+1]]==='Day')bmaBreaches++;
+    }
+  });
+  return{gaps,understaffed,overstaffed,bmaBreaches};
+}
+
+// Simulates Rita's AI pass: rotates on-call fairly across the team and fills weekday
+// shifts, seeded by iteration number so each re-run produces a different candidate rota.
+function generateShiftAssignment(rows,meta,iteration){
+  const n=rows.length;
+  const weekdayShifts=meta.type==='shift'?['Day','Evening','Night']:['Day'];
+  return rows.map((orig,i)=>{
+    const p={...orig,week:{}};
+    ROTA_DAYS.forEach((d,di)=>{
+      const isWeekend=di>=5;
+      const onCallIdx=(di+iteration*3)%n;
+      if(i===onCallIdx){p.week[d]='On-Call';return;}
+      if(isWeekend){p.week[d]='Off';return;}
+      p.week[d]=meta.type==='shift'?weekdayShifts[(i+di+iteration)%weekdayShifts.length]:'Day';
+    });
+    return p;
+  });
+}
+
 function getRotaState(dept){
   if(!rotaState[dept]){
     const dir=getDirectory(dept);
-    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    const shifts=['Day','Evening','Night','On-Call'];
+    const meta=deptMeta[dept];
     const rows=dir.slice(0,8).map(p=>{
       const week={};
-      days.forEach((d,di)=>{if(di<5)week[d]=p.grade==='Consultant'?'Day':'Day';else week[d]=di===5?'On-Call':'Off';});
+      ROTA_DAYS.forEach((d,di)=>{if(di<5)week[d]='Day';else week[d]=di===5?'On-Call':'Off';});
       return{...p,week};
     });
-    rotaState[dept]={rows,version:1,history:[],inputs:{uploadedRota:'',workingPatterns:'',bmaRules:'Max 48hrs/wk, 11hr rest between shifts, max 4 nights in a row',staffingReqs:''},analytics:{gaps:3,understaffed:2,bmaBreaches:0,overstaffed:1}};
+    rotaState[dept]={
+      rows,
+      version:0,               // 0 = imported previous rota, not yet AI-optimised
+      status:'draft',          // 'draft' | 'finalised'
+      manualEditMode:false,
+      editedSinceVersion:false,
+      history:[],              // completed iterations, each {version,label,analytics}
+      inputs:{uploadedRota:'',workingPatterns:'',bmaRules:'Max 48hrs/wk, 11hr rest between shifts, max 4 nights in a row',staffingReqs:''},
+      currentAnalytics:computeAnalytics(rows,meta),
+    };
   }
   return rotaState[dept];
+}
+
+function saveRotaInputs(){
+  const rs=getRotaState(state.dept);
+  rs.inputs.bmaRules=document.getElementById('bmaRulesInput').value;
+  rs.inputs.staffingReqs=document.getElementById('staffingReqsInput').value;
+}
+
+function runAI(){
+  const rs=getRotaState(state.dept);
+  const meta=deptMeta[state.dept];
+  if(rs.status==='finalised')return;
+  rs.history.push({
+    version:rs.version,
+    label:rs.version===0?'Imported previous rota':(rs.editedSinceVersion?`AI run ${rs.version} + manual edits`:`AI run ${rs.version}`),
+    analytics:rs.currentAnalytics,
+  });
+  const nextVersion=rs.version+1;
+  rs.rows=generateShiftAssignment(rs.rows,meta,nextVersion);
+  rs.version=nextVersion;
+  rs.editedSinceVersion=false;
+  rs.manualEditMode=false;
+  rs.currentAnalytics=computeAnalytics(rs.rows,meta);
+  renderRota();
+}
+
+function toggleManualEdit(){
+  const rs=getRotaState(state.dept);
+  if(rs.status==='finalised')return;
+  rs.manualEditMode=!rs.manualEditMode;
+  renderRota();
+}
+
+function editCell(rowId,day){
+  const rs=getRotaState(state.dept);
+  if(!rs.manualEditMode||rs.status==='finalised')return;
+  const meta=deptMeta[state.dept];
+  const options=meta.type==='shift'?['Day','Evening','Night','On-Call','Off']:['Day','On-Call','Off'];
+  const row=rs.rows.find(r=>r.id===rowId);
+  if(!row)return;
+  const cur=row.week[day]||'Off';
+  row.week[day]=options[(options.indexOf(cur)+1)%options.length];
+  rs.editedSinceVersion=true;
+  rs.currentAnalytics=computeAnalytics(rs.rows,meta);
+  renderRota();
+}
+
+function finaliseRota(){
+  const rs=getRotaState(state.dept);
+  if(rs.version===0){alert('Run AI Optimisation at least once before finalising the rota.');return;}
+  rs.status='finalised';
+  rs.manualEditMode=false;
+  renderRota();
+}
+
+function reopenRota(){
+  const rs=getRotaState(state.dept);
+  rs.status='draft';
+  renderRota();
 }
 
 function getLeaveSwapState(dept){
@@ -406,52 +521,105 @@ function rotaInputsHtml(meta,rs){
       <div class="form-row">
         <div>
           <div class="card-title" style="font-size:13px"><i class="ti ti-scale"></i>BMA Rota Rules</div>
-          <textarea id="bmaRulesInput" style="font-size:12px">${rs.inputs.bmaRules}</textarea>
+          <textarea id="bmaRulesInput" onchange="saveRotaInputs()" style="font-size:12px">${rs.inputs.bmaRules}</textarea>
         </div>
         <div>
           <div class="card-title" style="font-size:13px"><i class="ti ti-building-hospital"></i>Departmental Staffing Requirements</div>
-          <textarea id="staffingReqsInput" placeholder="e.g. Min 2 SHOs on twilight Mon–Fri&#10;Min 1 SHO twilight weekends&#10;Min 5 SpRs on-site weekdays" style="font-size:12px">${rs.inputs.staffingReqs}</textarea>
+          <textarea id="staffingReqsInput" onchange="saveRotaInputs()" placeholder="e.g. Min 2 SHOs on twilight Mon–Fri&#10;Min 1 SHO twilight weekends&#10;Min 5 SpRs on-site weekdays" style="font-size:12px">${rs.inputs.staffingReqs}</textarea>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="alert('Rita is re-optimising the rota…')"><i class="ti ti-robot"></i>Run AI Optimisation</button>
+      <button class="btn btn-primary" onclick="runAI()" ${rs.status==='finalised'?'disabled':''}><i class="ti ti-robot"></i>${rs.version===0?'Run AI Optimisation':'Re-run AI'}</button>
     </div>
   </div>`;
+}
+
+function analyticsChips(a){
+  return`<div class="analytics-row">
+    <div class="analytic-chip"><span style="color:#dc4d2f">●</span>${a.gaps} rota gaps</div>
+    <div class="analytic-chip"><span style="color:#92400e">●</span>${a.understaffed} understaffed slots</div>
+    <div class="analytic-chip"><span style="color:#27500A">●</span>${a.bmaBreaches===0?'BMA compliant':a.bmaBreaches+' BMA breaches'}</div>
+    <div class="analytic-chip"><span style="color:#6d28d9">●</span>${a.overstaffed} overstaffed slots</div>
+  </div>`;
+}
+
+function deltaBadge(curr,prev,key){
+  const diff=curr[key]-prev[key];
+  if(diff===0)return'<span style="color:var(--text-muted)">–</span>';
+  const better=diff<0;
+  return`<span style="color:${better?'#27500A':'#791F1F'};font-weight:600">${diff<0?'▼':'▲'}${Math.abs(diff)}</span>`;
 }
 
 function renderRota(){
   if(!isAdmin()){document.getElementById('content').innerHTML='<div class="info-box"><i class="ti ti-lock"></i>Rota Builder is available to administrators only.</div>';return;}
   const meta=deptMeta[state.dept];
   const rs=getRotaState(state.dept);
-  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const shiftClass={Day:'shift-day',Evening:'shift-eve',Night:'shift-night','On-Call':'shift-on-call',Off:'shift-off'};
-  let gridHtml=`<div class="rota-grid"><div class="rota-header">Name</div>${days.map(d=>`<div class="rota-header">${d}</div>`).join('')}`;
+  const editable=rs.manualEditMode&&rs.status!=='finalised';
+  let gridHtml=`<div class="rota-grid"><div class="rota-header">Name</div>${ROTA_DAYS.map(d=>`<div class="rota-header">${d}</div>`).join('')}`;
   rs.rows.forEach(p=>{
     gridHtml+=`<div class="rota-cell" style="font-size:12px;font-weight:500">${p.name}<br><span style="font-size:10px;color:var(--text-muted)">${p.grade}</span></div>`;
-    days.forEach(d=>{const s=p.week[d]||'Off';gridHtml+=`<div class="rota-cell"><span class="rota-shift ${shiftClass[s]||'shift-off'}">${s}</span></div>`;});
+    ROTA_DAYS.forEach(d=>{
+      const s=p.week[d]||'Off';
+      gridHtml+=`<div class="rota-cell${editable?' rota-cell-editable':''}"${editable?` onclick="editCell('${p.id}','${d}')" title="Click to change shift"`:''}><span class="rota-shift ${shiftClass[s]||'shift-off'}">${s}</span></div>`;
+    });
   });
   gridHtml+='</div>';
-  const ana=rs.analytics;
+
+  const versionBadge=rs.version===0?'<span class="badge badge-muted">Imported — unoptimised</span>':`<span class="badge badge-accent">v${rs.version}</span>`;
+  const statusBadgeHtml=rs.status==='finalised'?'<span class="badge badge-success"><i class="ti ti-lock"></i> Finalised</span>':'';
+  const editedBadge=rs.editedSinceVersion?'<span class="badge badge-warning">Manually edited</span>':'';
+
+  const prevEntry=rs.history[rs.history.length-1];
+  const comparisonHtml=prevEntry?`<div style="font-size:12px;color:var(--text-secondary);margin-top:8px">
+      vs <strong>${prevEntry.label}</strong>: gaps ${deltaBadge(rs.currentAnalytics,prevEntry.analytics,'gaps')} &nbsp;
+      understaffed ${deltaBadge(rs.currentAnalytics,prevEntry.analytics,'understaffed')} &nbsp;
+      overstaffed ${deltaBadge(rs.currentAnalytics,prevEntry.analytics,'overstaffed')} &nbsp;
+      BMA breaches ${deltaBadge(rs.currentAnalytics,prevEntry.analytics,'bmaBreaches')}
+    </div>`:'';
+
+  const timeline=[...rs.history,{version:rs.version,label:rs.status==='finalised'?`v${rs.version} — Finalised`:(rs.version===0?'Imported — current':`v${rs.version} — Current`),analytics:rs.currentAnalytics}];
+  let historyRows='';
+  for(let i=timeline.length-1;i>=0;i--){
+    const entry=timeline[i];
+    const prev=timeline[i-1];
+    historyRows+=`<tr${i===timeline.length-1?' class="current-row"':''}>
+      <td>${entry.label}</td>
+      <td>${entry.analytics.gaps}${prev?` ${deltaBadge(entry.analytics,prev.analytics,'gaps')}`:''}</td>
+      <td>${entry.analytics.understaffed}${prev?` ${deltaBadge(entry.analytics,prev.analytics,'understaffed')}`:''}</td>
+      <td>${entry.analytics.overstaffed}${prev?` ${deltaBadge(entry.analytics,prev.analytics,'overstaffed')}`:''}</td>
+      <td>${entry.analytics.bmaBreaches}${prev?` ${deltaBadge(entry.analytics,prev.analytics,'bmaBreaches')}`:''}</td>
+    </tr>`;
+  }
+
   const html=`
     ${rotaInputsHtml(meta,rs)}
+    <div class="info-box"><i class="ti ti-refresh"></i>Iterative build: run AI &rarr; review analytics &rarr; manual-edit if needed &rarr; re-run AI to compare against the last iteration &rarr; repeat until the rota looks right, then finalise.</div>
     <div class="card">
-      <div class="card-title"><i class="ti ti-calendar"></i>Rota — Week of 14 Jul 2025 <span class="badge badge-accent">v${rs.version}</span></div>
+      <div class="card-title" style="justify-content:space-between">
+        <span><i class="ti ti-calendar"></i>Rota — Week of 14 Jul 2025</span>
+        <span style="display:flex;gap:6px">${versionBadge}${editedBadge}${statusBadgeHtml}</span>
+      </div>
+      ${rs.status==='finalised'?'<div class="info-box"><i class="ti ti-check"></i>This rota is finalised and published. Reopen it to make further changes.</div>':''}
       ${gridHtml}
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-secondary btn-sm" onclick="alert('Manual edit mode — click any cell to change shift')"><i class="ti ti-pencil"></i>Manual Edit</button>
-        <button class="btn btn-primary btn-sm" onclick="alert('Rita is re-optimising…')"><i class="ti ti-robot"></i>Re-run AI</button>
-        <button class="btn btn-success btn-sm" onclick="alert('Rota finalised and published!')"><i class="ti ti-check"></i>Finalise Rota</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleManualEdit()" ${rs.status==='finalised'?'disabled':''}>${rs.manualEditMode?'<i class="ti ti-check"></i>Done Editing':'<i class="ti ti-pencil"></i>Manual Edit'}</button>
+        <button class="btn btn-primary btn-sm" onclick="runAI()" ${rs.status==='finalised'?'disabled':''}><i class="ti ti-robot"></i>${rs.version===0?'Run AI Optimisation':'Re-run AI'}</button>
+        ${rs.status==='finalised'
+          ?`<button class="btn btn-secondary btn-sm" onclick="reopenRota()"><i class="ti ti-lock-open"></i>Reopen for Editing</button>`
+          :`<button class="btn btn-success btn-sm" onclick="finaliseRota()" ${rs.version===0?'disabled title="Run AI Optimisation first"':''}><i class="ti ti-check"></i>Finalise Rota</button>`}
       </div>
+      ${rs.manualEditMode?'<div style="font-size:11px;color:var(--text-muted);margin-top:6px">Click any shift to cycle it. Analytics below update live.</div>':''}
     </div>
     <div class="card">
-      <div class="card-title"><i class="ti ti-chart-bar"></i>Analytics — v${rs.version}</div>
-      <div class="analytics-row">
-        <div class="analytic-chip"><span style="color:#dc4d2f">●</span>${ana.gaps} rota gaps</div>
-        <div class="analytic-chip"><span style="color:#92400e">●</span>${ana.understaffed} understaffed slots</div>
-        <div class="analytic-chip"><span style="color:#27500A">●</span>${ana.bmaBreaches===0?'BMA compliant':ana.bmaBreaches+' BMA breaches'}</div>
-        <div class="analytic-chip"><span style="color:#6d28d9">●</span>${ana.overstaffed} overstaffed slots</div>
-      </div>
-      ${rs.history.length>0?`<div style="margin-top:8px;font-size:12px;color:var(--text-secondary)">Previous: ${rs.history.map(h=>`v${h.version} — ${h.gaps} gaps`).join(', ')}</div>`:''}
-    </div>`;
+      <div class="card-title"><i class="ti ti-chart-bar"></i>Analytics — ${rs.version===0?'imported rota':'v'+rs.version}</div>
+      ${analyticsChips(rs.currentAnalytics)}
+      ${comparisonHtml}
+    </div>
+    ${rs.history.length>0?`<div class="card">
+      <div class="card-title"><i class="ti ti-history"></i>Iteration History</div>
+      <table class="iteration-table"><thead><tr><th>Iteration</th><th>Gaps</th><th>Understaffed</th><th>Overstaffed</th><th>BMA Breaches</th></tr></thead>
+      <tbody>${historyRows}</tbody></table>
+    </div>`:''}`;
   document.getElementById('content').innerHTML=html;
 }
 
