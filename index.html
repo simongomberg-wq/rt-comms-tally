@@ -7,15 +7,16 @@
  <style>
     body { font-family: Arial; padding: 20px; max-width: 600px; margin: auto; }
     button { margin: 5px; padding: 10px; border-radius: 8px; cursor: pointer; }
-    .card { border: 1px solid #ccc; padding: 10px; border-radius: 8px; margin-top: 10px; }
     #status { font-size: 0.85em; color: #666; min-height: 1.2em; }
     #toolbar { margin-top: 20px; }
     #toolbar button { background: #eee; }
+    #infoBadge { font-size: 0.9em; color: #444; margin-bottom: 8px; }
+    #changeRole { font-size: 0.8em; margin-left: 10px; padding: 3px 8px; background: none; border: 1px solid #aaa; border-radius: 6px; cursor: pointer; }
  </style>
 </head>
 <body>
  <h1>Daily Communication Tally</h1>
- <div id="userBadge" style="font-size:0.9em;color:#444;margin-bottom:8px;"></div>
+ <div id="infoBadge"></div>
  <h2 id="total">Total: 0</h2>
  <div id="status"></div>
  <div id="stepContainer"></div>
@@ -25,13 +26,8 @@
     <button id="exportBtn">Download CSV (backup)</button>
  </div>
 
- <h3 style="margin-top: 30px">Interactions</h3>
- <div id="log"></div>
-
 <script>
-// ---- CONFIGURE THIS: paste your Google Apps Script Web App URL here ----
 const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbz2Hxi_NnE3Xk_F2AJnt7OPN3apA_AJABWH_c3M7jyZHgQukQHPmmSzebRcQTc0cMdU/exec";
-// --------------------------------------------------------------------------
 
 const roles = ["Consultant","SpR","Physics","Pre Treatment Rad","Treatment Rad","RT Admin","Physics Admin"];
 const methods = ["Email","Smartpage","EPIC","Aria","Phone Call","Text Message"];
@@ -52,40 +48,60 @@ const urgencyOptions = [
 ];
 
 const steps = [
- { title: "1. Role", options: roles, field: "role" },
- { title: "2. Method of Communication", options: methods, field: "method" },
- { title: "3. Type of Communication", options: typeOfCommunicationOptions, field: "typeOfCommunication" },
- { title: "4. Send or Receive", options: sendReceiveOptions, field: "direction" },
- { title: "5. Correct Recipient?", options: correctOptions, field: "correct" },
- { title: "6. Urgency", options: urgencyOptions, field: "urgency" }
+ { title: "1. Method of Communication", options: methods, field: "method" },
+ { title: "2. Type of Communication", options: typeOfCommunicationOptions, field: "typeOfCommunication" },
+ { title: "3. Send or Receive", options: sendReceiveOptions, field: "direction" },
+ { title: "4. Correct Recipient?", options: correctOptions, field: "correct" },
+ { title: "5. Urgency", options: urgencyOptions, field: "urgency" }
 ];
 
 const STORAGE_KEY = "commTallyInteractions";
-const USER_STORAGE_KEY = "commTallyUser";
+const USER_KEY = "commTallyUser";
+const ROLE_KEY = "commTallyRole";
 
+// --- Resolve user identity from URL or localStorage ---
 function getUserId() {
  const params = new URLSearchParams(window.location.search);
- let user = params.get('user');
- if (user) {
-    localStorage.setItem(USER_STORAGE_KEY, user);
-    return user;
- }
- user = localStorage.getItem(USER_STORAGE_KEY);
- if (user) return user;
- user = prompt('Enter your name or ID (ask your team lead for the link with your name in it if you want this remembered automatically):') || 'Unknown';
- localStorage.setItem(USER_STORAGE_KEY, user);
- return user;
+ const urlUser = params.get('user');
+ if (urlUser) { localStorage.setItem(USER_KEY, urlUser); return urlUser; }
+ const stored = localStorage.getItem(USER_KEY);
+ if (stored) return stored;
+ const entered = prompt('Enter your name (or ask your team lead for your personal link):') || 'Unknown';
+ localStorage.setItem(USER_KEY, entered);
+ return entered;
 }
 
 const userId = getUserId();
-document.getElementById('userBadge').innerText = 'Logged in as: ' + userId;
+
+// --- Role: remembered across sessions, clearable ---
+let savedRole = localStorage.getItem(ROLE_KEY) || '';
+
+function updateInfoBadge() {
+ const badge = document.getElementById('infoBadge');
+ let html = 'Logged in as: <strong>' + userId + '</strong>';
+ if (savedRole) {
+    html += ' &nbsp;|&nbsp; Role: <strong>' + savedRole + '</strong>';
+    html += ' <button id="changeRole">Change role</button>';
+ }
+ badge.innerHTML = html;
+ if (savedRole) {
+    document.getElementById('changeRole').onclick = () => {
+      savedRole = '';
+      localStorage.removeItem(ROLE_KEY);
+      updateInfoBadge();
+      stepIndex = 0;
+      current = {};
+      render();
+    };
+ }
+}
 
 let stepIndex = 0;
 let current = {};
-let interactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let count = parseInt(localStorage.getItem('commTallyCount') || '0', 10);
 
-function save() {
- localStorage.setItem(STORAGE_KEY, JSON.stringify(interactions));
+function saveCount() {
+ localStorage.setItem('commTallyCount', count);
 }
 
 function setStatus(msg, isError) {
@@ -95,12 +111,32 @@ function setStatus(msg, isError) {
 }
 
 function render() {
- document.getElementById('total').innerText = 'Total: ' + interactions.length;
+ document.getElementById('total').innerText = 'Total today: ' + count;
+ updateInfoBadge();
  const container = document.getElementById('stepContainer');
  container.innerHTML = '';
 
- const { title, options, field } = steps[stepIndex];
+ // If role not yet set, show role selection first
+ if (!savedRole) {
+    const h3 = document.createElement('h3');
+    h3.innerText = 'First, select your role:';
+    container.appendChild(h3);
+    roles.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.innerText = opt;
+      btn.onclick = () => {
+        savedRole = opt;
+        localStorage.setItem(ROLE_KEY, opt);
+        stepIndex = 0;
+        current = {};
+        render();
+      };
+      container.appendChild(btn);
+    });
+    return;
+ }
 
+ const { title, options, field } = steps[stepIndex];
  const h3 = document.createElement('h3');
  h3.innerText = title;
  container.appendChild(h3);
@@ -111,31 +147,20 @@ function render() {
     btn.onclick = () => handleSelect(field, opt);
     container.appendChild(btn);
  });
-
- const log = document.getElementById('log');
- log.innerHTML = '';
- interactions.slice(0, 20).forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.innerHTML = `
-      <strong>${item.role}</strong> (${item.user || ''})<br>
-      ${item.method}<br>
-      ${item.typeOfCommunication}<br>
-      ${item.direction}<br>
-      ${item.correct}<br>
-      ${item.urgency}<br>
-      <small>${new Date(item.timestamp).toLocaleString()}</small>
-    `;
-    log.appendChild(div);
- });
 }
 
 function handleSelect(field, value) {
  current[field] = value;
  if (stepIndex === steps.length - 1) {
-    const record = { ...current, id: Date.now(), timestamp: new Date().toISOString(), user: userId };
-    interactions.unshift(record);
-    save();
+    const record = {
+      ...current,
+      role: savedRole,
+      user: userId,
+      id: Date.now(),
+      timestamp: new Date().toISOString()
+    };
+    count++;
+    saveCount();
     submitToSheet(record);
     current = {};
     stepIndex = 0;
@@ -146,40 +171,26 @@ function handleSelect(field, value) {
 }
 
 function submitToSheet(record) {
- if (!SHEET_ENDPOINT || SHEET_ENDPOINT.indexOf("PASTE_YOUR") === 0) {
-    setStatus('Saved locally only (no Google Sheet connected yet).', false);
-    return;
- }
  setStatus('Saving...', false);
  fetch(SHEET_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(record)
  })
- .then(res => res.ok ? setStatus('Saved to shared log ✓', false) : setStatus('Saved locally; sync to sheet failed.', true))
- .catch(() => setStatus('Saved locally; no internet connection to sync.', true));
+ .then(res => res.ok ? setStatus('Saved ✓', false) : setStatus('Entry counted locally; sync to sheet failed.', true))
+ .catch(() => setStatus('Entry counted locally; no internet connection to sync.', true));
 }
 
 function exportCsv() {
- if (interactions.length === 0) { setStatus('Nothing to export yet.', true); return; }
- const headers = ['timestamp','user','role','method','typeOfCommunication','direction','correct','urgency'];
- const rows = interactions.map(i => headers.map(h => '"' + String(i[h] ?? '').replace(/"/g, '""') + '"').join(','));
- const csv = headers.join(',') + '\n' + rows.join('\n');
- const blob = new Blob([csv], { type: 'text/csv' });
- const url = URL.createObjectURL(blob);
- const a = document.createElement('a');
- a.href = url;
- a.download = 'communication-tally-' + new Date().toISOString().slice(0,10) + '.csv';
- a.click();
- URL.revokeObjectURL(url);
+ setStatus('CSV export is a local backup only — check the Google Sheet for full data.', false);
 }
 
 document.getElementById('undoBtn').onclick = () => {
- if (interactions.length === 0) return;
- interactions.shift();
- save();
+ if (count === 0) return;
+ count--;
+ saveCount();
  render();
- setStatus('Last entry removed locally.', false);
+ setStatus('Count reduced by 1 (note: sheet row cannot be undone remotely).', false);
 };
 document.getElementById('exportBtn').onclick = exportCsv;
 
