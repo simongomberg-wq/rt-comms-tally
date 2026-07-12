@@ -11,25 +11,22 @@
     #toolbar { margin-top: 20px; }
     #toolbar button { background: #eee; }
     #infoBadge { font-size: 0.9em; color: #444; margin-bottom: 8px; }
-    #changeRole { font-size: 0.8em; margin-left: 10px; padding: 3px 8px; background: none; border: 1px solid #aaa; border-radius: 6px; cursor: pointer; }
  </style>
 </head>
 <body>
  <h1>Daily Communication Tally</h1>
  <div id="infoBadge"></div>
- <h2 id="total">Total: 0</h2>
+ <h2 id="total">Total today: 0</h2>
  <div id="status"></div>
  <div id="stepContainer"></div>
 
  <div id="toolbar">
     <button id="undoBtn">Undo last entry</button>
-    <button id="exportBtn">Download CSV (backup)</button>
  </div>
 
 <script>
 const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbz2Hxi_NnE3Xk_F2AJnt7OPN3apA_AJABWH_c3M7jyZHgQukQHPmmSzebRcQTc0cMdU/exec";
 
-const roles = ["Consultant","SpR","Physics","Pre Treatment Rad","Treatment Rad","RT Admin","Physics Admin","APR"];
 const methods = ["Email","Smartpage","EPIC","Aria","Phone Call","Text Message"];
 const typeOfCommunicationOptions = [
  "Clinical RT related",
@@ -55,54 +52,33 @@ const steps = [
  { title: "5. Urgency", options: urgencyOptions, field: "urgency" }
 ];
 
-const STORAGE_KEY = "commTallyInteractions";
 const USER_KEY = "commTallyUser";
 const ROLE_KEY = "commTallyRole";
+const COUNT_KEY = "commTallyCount";
 
-// --- Resolve user identity from URL or localStorage ---
-function getUserId() {
- const params = new URLSearchParams(window.location.search);
- const urlUser = params.get('user');
- if (urlUser) { localStorage.setItem(USER_KEY, urlUser); return urlUser; }
- const stored = localStorage.getItem(USER_KEY);
- if (stored) return stored;
- const entered = prompt('Enter your name (or ask your team lead for your personal link):') || 'Unknown';
- localStorage.setItem(USER_KEY, entered);
- return entered;
+function getParam(key) {
+ return new URLSearchParams(window.location.search).get(key);
 }
 
-const userId = getUserId();
+// Resolve user — URL param takes priority, then localStorage
+const urlUser = getParam('user');
+if (urlUser) localStorage.setItem(USER_KEY, urlUser);
+const userId = localStorage.getItem(USER_KEY) || 'Unknown';
 
-// --- Role: remembered across sessions, clearable ---
-let savedRole = localStorage.getItem(ROLE_KEY) || '';
+// Resolve role — URL param takes priority, then localStorage
+const urlRole = getParam('role');
+if (urlRole) localStorage.setItem(ROLE_KEY, urlRole);
+const userRole = localStorage.getItem(ROLE_KEY) || '';
 
-function updateInfoBadge() {
- const badge = document.getElementById('infoBadge');
- let html = 'Logged in as: <strong>' + userId + '</strong>';
- if (savedRole) {
-    html += ' &nbsp;|&nbsp; Role: <strong>' + savedRole + '</strong>';
-    html += ' <button id="changeRole">Change role</button>';
- }
- badge.innerHTML = html;
- if (savedRole) {
-    document.getElementById('changeRole').onclick = () => {
-      savedRole = '';
-      localStorage.removeItem(ROLE_KEY);
-      updateInfoBadge();
-      stepIndex = 0;
-      current = {};
-      render();
-    };
- }
-}
+document.getElementById('infoBadge').innerHTML =
+ 'Logged in as: <strong>' + userId + '</strong>' +
+ (userRole ? ' &nbsp;|&nbsp; Role: <strong>' + userRole + '</strong>' : '');
 
 let stepIndex = 0;
 let current = {};
-let count = parseInt(localStorage.getItem('commTallyCount') || '0', 10);
+let count = parseInt(localStorage.getItem(COUNT_KEY) || '0', 10);
 
-function saveCount() {
- localStorage.setItem('commTallyCount', count);
-}
+function saveCount() { localStorage.setItem(COUNT_KEY, count); }
 
 function setStatus(msg, isError) {
  const el = document.getElementById('status');
@@ -112,29 +88,8 @@ function setStatus(msg, isError) {
 
 function render() {
  document.getElementById('total').innerText = 'Total today: ' + count;
- updateInfoBadge();
  const container = document.getElementById('stepContainer');
  container.innerHTML = '';
-
- // If role not yet set, show role selection first
- if (!savedRole) {
-    const h3 = document.createElement('h3');
-    h3.innerText = 'First, select your role:';
-    container.appendChild(h3);
-    roles.forEach(opt => {
-      const btn = document.createElement('button');
-      btn.innerText = opt;
-      btn.onclick = () => {
-        savedRole = opt;
-        localStorage.setItem(ROLE_KEY, opt);
-        stepIndex = 0;
-        current = {};
-        render();
-      };
-      container.appendChild(btn);
-    });
-    return;
- }
 
  const { title, options, field } = steps[stepIndex];
  const h3 = document.createElement('h3');
@@ -154,7 +109,7 @@ function handleSelect(field, value) {
  if (stepIndex === steps.length - 1) {
     const record = {
       ...current,
-      role: savedRole,
+      role: userRole,
       user: userId,
       id: Date.now(),
       timestamp: new Date().toISOString()
@@ -181,10 +136,6 @@ function submitToSheet(record) {
  .catch(() => setStatus('Entry counted locally; no internet connection to sync.', true));
 }
 
-function exportCsv() {
- setStatus('CSV export is a local backup only — check the Google Sheet for full data.', false);
-}
-
 document.getElementById('undoBtn').onclick = () => {
  if (count === 0) return;
  count--;
@@ -192,7 +143,6 @@ document.getElementById('undoBtn').onclick = () => {
  render();
  setStatus('Count reduced by 1 (note: sheet row cannot be undone remotely).', false);
 };
-document.getElementById('exportBtn').onclick = exportCsv;
 
 render();
 </script>
