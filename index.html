@@ -21,9 +21,6 @@
  <div id="status"></div>
  <div id="stepContainer"></div>
 
- <div id="toolbar">
-    <button id="undoBtn">Undo last entry</button>
- </div>
 
 <script>
 const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbz2Hxi_NnE3Xk_F2AJnt7OPN3apA_AJABWH_c3M7jyZHgQukQHPmmSzebRcQTc0cMdU/exec";
@@ -148,13 +145,6 @@ function submitToSheet(record) {
  .catch(() => setStatus('Entry counted locally; no internet connection to sync.', true));
 }
 
-document.getElementById('undoBtn').onclick = () => {
- if (count === 0) return;
- count--;
- saveCount();
- render();
- setStatus('Count reduced by 1 (note: sheet row cannot be undone remotely).', false);
-};
 
 render();
 </script>
