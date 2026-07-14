@@ -51,7 +51,8 @@ const urgencyOptions = [
  "Urgent (30 mins)",
  "Semi-urgent (1 hour)",
  "Non-urgent (today)",
- "Non-urgent (tomorrow)"
+ "Non-urgent (tomorrow)",
+ "Not applicable, no response required"
 ];
 
 const steps = [
@@ -87,7 +88,7 @@ document.getElementById('infoBadge').innerHTML =
 
 const today = new Date().toISOString().slice(0, 10);
 const storedDate = localStorage.getItem(DATE_KEY);
-if (storedDate !== today) {
+if (storedDate !== today || getParam('reset') === '1') {
  localStorage.setItem(DATE_KEY, today);
  localStorage.setItem(COUNT_KEY, '0');
 }
