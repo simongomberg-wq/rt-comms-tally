@@ -86,7 +86,9 @@ document.getElementById('infoBadge').innerHTML =
  'Logged in as: <strong>' + userId + '</strong>' +
  (userRole ? ' &nbsp;|&nbsp; Role: <strong>' + userRole + '</strong>' : '');
 
-const today = new Date().toISOString().slice(0, 10);
+const n = new Date();
+const today = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+
 const storedDate = localStorage.getItem(DATE_KEY);
 if (storedDate !== today || getParam('reset') === '1') {
  localStorage.setItem(DATE_KEY, today);
